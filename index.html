@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D.A.N. Digital Anatomy Navigator | v4.0</title>
+    <style>
+        :root {
+            --menta:    #00ffbb;
+            --purpura:  #6c5ce7;
+            --rojo:     #ff7675;
+            --amarillo: #ffeaa7;
+            --bg:       #030405;
+            --panel:    #0a0c10;
+            --borde:    #1a202c;
+            --texto:    #ffffff;
+            --suave:    #8b9bb4;
+            --verde-ok: #4cd137;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--texto);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1340px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 0;
+            border-bottom: 1px solid var(--borde);
+            margin-bottom: 28px;
+        }
+        .marca { display: flex; align-items: center; gap: 14px; }
+        .acronimo {
+            color: var(--menta);
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            text-shadow: 0 0 18px rgba(0,255,187,0.35);
+        }
+        .subtitulo { display: flex; flex-direction: column; gap: 2px; }
+        .nombre-completo { color: var(--suave); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 2.5px; }
+        .version-tag {
+            display: inline-block;
+            background: rgba(108,92,231,0.2);
+            border: 1px solid var(--purpura);
+            color: var(--purpura);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .status { color: var(--verde-ok); font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: 1px; }
+        .status::before {
+            content: '';
+            width: 8px; height: 8px;
+            background: var(--verde-ok);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--verde-ok);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%,100% { box-shadow: 0 0 8px var(--verde-ok); }
+            50%      { box-shadow: 0 0 16px var(--verde-ok); }
+        }
+
+        .main-container { width: 100%; max-width: 1340px; display: grid; grid-template-columns: 1fr; gap: 22px; }
+        @media (min-width: 960px) { .main-container { grid-template-columns: 560px 1fr; } }
+
+        .panel { background: var(--panel); border-radius: 16px; padding: 22px; border: 1px solid var(--borde); }
+        .zona-captura { display: flex; flex-direction: column; gap: 16px; }
+
+        .contenedor-visor {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3/4;
+            border: 2px dashed var(--borde);
+            border-radius: 12px;
+            background: #050608;
+            overflow: hidden;
+        }
+        .contenedor-visor.tiene-imagen { border-color: rgba(0,255,187,0.25); }
+        .contenedor-visor.esperando-clic { cursor: crosshair; }
+
+        .visor-imagen { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .visor-imagen img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; user-select: none; pointer-events: none; }
+
+        #layerTelemetria { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; }
+        .placeholder-dan { color: var(--suave); text-align: center; font-size: 0.88rem; line-height: 1.7; padding: 20px; pointer-events: none; }
+        .placeholder-dan .icono { font-size: 2.5rem; margin-bottom: 10px; display: block; opacity: 0.5; }
+
+        .instruccion-clic {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            border: 1px solid var(--menta);
+            color: var(--menta);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            display: none;
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .fila-controles { display: flex; gap: 10px; }
+        .btn-dan {
+            flex: 1;
+            background: linear-gradient(135deg, var(--purpura) 0%, #8e44ad 100%);
+            color: #fff; border: none; border-radius: 10px; padding: 16px;
+            font-size: 0.88rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-reset {
+            background: transparent; border: 1px solid var(--borde); color: var(--suave);
+            border-radius: 10px; padding: 16px 18px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+        }
+        .btn-reset:hover { border-color: var(--rojo); color: var(--rojo); }
+
+        .contador { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--suave); }
+        .contador span { color: var(--menta); font-weight: 700; }
+
+        .visor-resultados { display: flex; flex-direction: column; gap: 0; }
+        .cabecera-resultados { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .titulo-resultados { color: var(--suave); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; }
+        .badge-modo { background: rgba(0,255,187,0.1); border: 1px solid rgba(0,255,187,0.3); color: var(--menta); font-size: 0.65rem; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; }
+
+        .card-diagnostico { background: #050608; border: 1px solid var(--borde); border-radius: 10px; overflow: hidden; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-idle { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 14px; height: 100%; min-height: 420px; color: var(--suave); font-size: 0.82rem; text-align: center; padding: 30px; }
+        .idle-icon { font-size: 3rem; opacity: 0.3; }
+
+        .cargando-dan { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; min-height: 420px; color: var(--menta); font-weight: 700; font-size: 0.85rem; }
+        .spinner-radar { width: 40px; height: 40px; border: 3px solid rgba(0,255,187,0.2); border-top-color: var(--menta); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-coord { font-size: 0.7rem; color: var(--suave); }
+
+        .resultado-activo { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+        .badge-estado { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; width: fit-content; }
+        .badge-estado::before { content: ''; width: 7px; height: 7px; border-radius: 50%; }
+        
+        .estado-NORMAL { background: rgba(76,209,55,0.15); border: 1px solid #4cd137; color: #4cd137; }
+        .estado-NORMAL::before { background: #4cd137; }
+        .estado-FRACTURA { background: rgba(255,118,117,0.15); border: 1px solid var(--rojo); color: var(--rojo); }
+        .estado-FRACTURA::before { background: var(--rojo); }
+        .estado-FISURA { background: rgba(255,234,167,0.15); border: 1px solid var(--amarillo); color: var(--amarillo); }
+        .estado-FISURA::before { background: var(--amarillo); }
+        .estado-ARTROSIS { background: rgba(255,234,167,0.15); border: 1px solid var(--amarillo); color: var(--amarillo); }
+        .estado-ARTROSIS::before { background: var(--amarillo); }
+        .estado-OSTEOPENIA { background: rgba(108,92,231,0.15); border: 1px solid var(--purpura); color: #a29bfe; }
+        .estado-OSTEOPENIA::before { background: #a29bfe; }
+        .estado-ANOMALÍA { background: rgba(255,118,117,0.15); border: 1px solid var(--rojo); color: var(--rojo); }
+        .estado-ANOMALÍA::before { background: var(--rojo); }
+        .estado-INDETERMINADO { background: rgba(139,155,180,0.15); border: 1px solid var(--suave); color: var(--suave); }
+        .estado-INDETERMINADO::before { background: var(--suave); }
+
+        .dato-row { display: flex; flex-direction: column; gap: 4px; }
+        .dato-label { font-size: 0.65rem; color: var(--suave); text-transform: uppercase; letter-spacing: 1.5px; }
+        .dato-valor { font-size: 0.92rem; color: var(--texto); line-height: 1.5; }
+        .dato-valor.highlight { color: var(--menta); font-weight: 700; font-size: 1rem; }
+        .separador { border: none; border-top: 1px solid var(--borde); }
+
+        .confianza-wrap { display: flex; flex-direction: column; gap: 6px; }
+        .confianza-label { display: flex; justify-content: space-between; }
+        .confianza-label span:last-child { color: var(--menta); font-weight: 700; font-size: 0.82rem; }
+        .barra-bg { height: 6px; background: var(--borde); border-radius: 3px; overflow: hidden; }
+        .barra-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--purpura), var(--menta)); transition: width 0.8s ease; }
+
+        .coord-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(108,92,231,0.12); border: 1px solid rgba(108,92,231,0.3); color: #a29bfe; font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; font-family: 'Courier New', monospace; }
+
+        .historial-wrap { margin-top: 8px; }
+        .historial-titulo { font-size: 0.65rem; color: var(--suave); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        .historial-lista { display: flex; flex-direction: column; gap: 6px; }
+        .historial-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--borde); border-radius: 8px; cursor: pointer; font-size: 0.78rem; }
+        .historial-item:hover { border-color: var(--menta); background: rgba(0,255,187,0.05); }
+        .historial-item.activo { border-color: var(--menta); background: rgba(0,255,187,0.07); }
+        .historial-num { width: 22px; height: 22px; background: var(--menta); color: #000; border-radius: 50%; font-size: 0.65rem; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .historial-nombre { flex: 1; color: var(--texto); font-weight: 600; }
+        .historial-estado { font-size: 0.65rem; font-weight: 700; }
+
+        .error-panel { padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 280px; justify-content: center; text-align: center; }
+        .error-icono { font-size: 2.5rem; }
+        .error-titulo { color: var(--rojo); font-weight: 700; font-size: 0.9rem; }
+        .error-msg { color: var(--suave); font-size: 0.8rem; line-height: 1.6; max-width: 320px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="marca">
+        <div class="acronimo">D.A.N.</div>
+        <div class="subtitulo">
+            <div class="nombre-completo">Digital Anatomy Navigator</div>
+            <div class="version-tag">Escaneo Inverso Interactivo v4.0</div>
+        </div>
+    </div>
+    <div class="status">NÚCLEO ACTIVO — MODO CLIC</div>
+</header>
+
+<div class="main-container">
+    <div class="panel zona-captura">
+        <div class="contenedor-visor" id="contenedorVisor">
+            <div class="visor-imagen" id="zonaClick" onclick="manejarClickEnVisor(event)">
+                <div class="placeholder-dan" id="placeholder">
+                    <span class="icono">🦴</span>
+                    Arrastre o haga clic para cargar<br>una radiografía o foto ósea
+                </div>
+                <img id="preview" src="" alt="Imagen Ósea" style="display:none;">
+            </div>
+            <canvas id="layerTelemetria"></canvas>
+            <div class="instruccion-clic" id="instruccionClic">
+                ✛ Haga clic sobre el hueso que desea analizar
+            </div>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="cargarImagen(this)">
+
+        <div class="fila-controles">
+            <button class="btn-dan" onclick="document.getElementById('fileInput').click()">
+                ↑ Cargar Archivo Óseo
+            </button>
+            <button class="btn-reset" id="btnReset" onclick="resetearSesion()" title="Reiniciar sesión">
+                ✕ Reset
+            </button>
+        </div>
+
+        <div class="contador">
+            <span>ANÁLISIS EN SESIÓN</span>
+            <span id="contadorNum">0</span>
+        </div>
+
+        <div class="historial-wrap" id="historialWrap" style="display:none;">
+            <div class="historial-titulo">Puntos analizados — clic para revisar</div>
+            <div class="historial-lista" id="historialLista"></div>
+        </div>
+    </div>
+
+    <div class="panel visor-resultados">
+        <div class="cabecera-resultados">
+            <div class="titulo-resultados">Consola de Diagnóstico Puntual</div>
+            <div class="badge-modo">Modo Interactivo</div>
+        </div>
+
+        <div class="card-diagnostico" id="cardDiagnostico">
+            <div class="card-idle" id="estadoIdle">
+                <div class="idle-icon">📡</div>
+                <div>
+                    Cargue una imagen ósea y haga clic<br>
+                    sobre el fragmento que desea analizar.<br><br>
+                    <span style="color: var(--menta); font-weight:700;">
+                        El sistema identificará la pieza exacta<br>y emitirá un diagnóstico adaptativo.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let archivoSeleccionado = null;
+    let estaAnalizando      = false;
+    let historial           = [];          
+    let puntoActivo         = -1;          
+
+    const preview         = document.getElementById('preview');
+    const placeholder     = document.getElementById('placeholder');
+    const canvas          = document.getElementById('layerTelemetria');
+    const ctx             = canvas.getContext('2d');
+    const contenedorVisor = document.getElementById('contenedorVisor');
+    const instruccionClic = document.getElementById('instruccionClic');
+    const cardDiagnostico = document.getElementById('cardDiagnostico');
+    const historialWrap   = document.getElementById('historialWrap');
+    const historialLista  = document.getElementById('historialLista');
+    const contadorNum     = document.getElementById('contadorNum');
+
+    function cargarImagen(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        historial = [];
+        puntoActivo = -1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        historialWrap.style.display = 'none';
+        historialLista.innerHTML = '';
+        contadorNum.textContent = '0';
+        
+        cardDiagnostico.innerHTML = `
+            <div class="card-idle" id="estadoIdle">
+                <div class="idle-icon">📡</div>
+                <div>
+                    Cargue una imagen ósea y haga clic<br>
+                    sobre el fragmento que desea analizar.<br><br>
+                    <span style="color: var(--menta); font-weight:700;">
+                        El sistema identificará la pieza exacta<br>y emitirá un diagnóstico adaptativo.
+                    </span>
+                </div>
+            </div>
+        `;
+
+        archivoSeleccionado = file;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+            instruccionClic.style.display = 'block';
+            contenedorVisor.classList.add('tiene-imagen', 'esperando-clic');
+
+            preview.onload = () => {
+                sincronizarCanvas();
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function sincronizarCanvas() {
+        if (!preview || preview.style.display === 'none' || preview.clientWidth === 0) return;
+
+        canvas.width  = preview.clientWidth;
+        canvas.height = preview.clientHeight;
+        canvas.style.left = preview.offsetLeft + 'px';
+        canvas.style.top  = preview.offsetTop + 'px';
+
+        redibujarTodosMarcadores();
+    }
+
+    window.addEventListener('resize', sincronizarCanvas);
+
+    function redibujarTodosMarcadores() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        historial.forEach((item, idx) => {
+            const esActivo = (idx === puntoActivo);
+            dibujarMarcador(item.x, item.y, idx + 1, esActivo, item.estado);
+        });
+    }
+
+    function dibujarMarcador(pctX, pctY, numero, esActivo, estado) {
+        const px = (pctX / 100) * canvas.width;
+        const py = (pctY / 100) * canvas.height;
+
+        const colorMap = {
+            'NORMAL':        '#4cd137',
+            'FRACTURA':      '#ff7675',
+            'FISURA':        '#ffeaa7',
+            'ARTROSIS':      '#ffeaa7',
+            'OSTEOPENIA':    '#a29bfe',
+            'ANOMALÍA':      '#ff7675',
+            'INDETERMINADO': '#8b9bb4',
+        };
+        const color = colorMap[estado] || '#00ffbb';
+
+        if (esActivo) {
+            ctx.beginPath();
+            ctx.arc(px, py, 18, 0, 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.3;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.beginPath();
+        ctx.arc(px, py, esActivo ? 8 : 5.5, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = esActivo ? 14 : 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(px, py, esActivo ? 8 : 5.5, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${esActivo ? 9 : 7.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(numero), px, py);
+    }
+
+    function manejarClickEnVisor(event) {
+        if (!archivoSeleccionado) {
+            document.getElementById('fileInput').click();
+            return;
+        }
+        if (estaAnalizando) return;
+
+        const rect   = preview.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        if (clickX < 0 || clickY < 0 || clickX > rect.width || clickY > rect.height) return;
+
+        const pctX = parseFloat(((clickX / rect.width)  * 100).toFixed(1));
+        const pctY = parseFloat(((clickY / rect.height) * 100).toFixed(1));
+
+        enviarAnalisis(pctX, pctY);
+    }
+
+    async function enviarAnalisis(pctX, pctY) {
+        estaAnalizando = true;
+        contenedorVisor.classList.remove('esperando-clic');
+        mostrarCargando(pctX, pctY);
+
+        const formData = new FormData();
+        formData.append('file', archivoSeleccionado);
+        formData.append('click_x', pctX);
+        formData.append('click_y', pctY);
+
+        try {
+            const resp = await fetch('/analizar_punto', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(err.detail || 'Error del servidor');
+            }
+
+            const data = await resp.json();
+
+            const entrada = { ...data, x: pctX, y: pctY };
+            historial.push(entrada);
+            puntoActivo = historial.length - 1;
+
+            actualizarContador();
+            actualizarHistorialUI();
+            mostrarResultado(entrada, historial.length);
+            sincronizarCanvas();
+
+        } catch (error) {
+            mostrarError(error.message);
+        } finally {
+            estaAnalizando = false;
+            contenedorVisor.classList.add('esperando-clic');
+        }
+    }
+
+    function mostrarCargando(pctX, pctY) {
+        cardDiagnostico.innerHTML = `
+            <div class="cargando-dan">
+                <div class="spinner-radar"></div>
+                <div>AUDITANDO MATRIZ ÓSEA ADAPTATIVA...</div>
+                <div class="loading-coord">COORDENADAS FLOTANTES: X=${pctX}% — Y=${pctY}%</div>
+            </div>
+        `;
+    }
+
+    function mostrarResultado(data, numero) {
+        const estado = data.estado || 'INDETERMINADO';
+        const confianza = typeof data.confianza === 'number' ? data.confianza : 0;
+
+        cardDiagnostico.innerHTML = `
+            <div class="resultado-activo">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <div class="badge-estado estado-${estado.replace(/\s+/g,'_')}">${estado}</div>
+                    <div class="coord-badge">✛ X: ${data.x}% · Y: ${data.y}%</div>
+                </div>
+
+                <div class="dato-row">
+                    <div class="dato-label">Estructura Ósea Localizada</div>
+                    <div class="dato-valor highlight">${data.estructura_osea || '—'}</div>
+                </div>
+
+                <div class="dato-row">
+                    <div class="dato-label">Región Anatómica Deducida</div>
+                    <div class="dato-valor">${data.region || '—'}</div>
+                </div>
+
+                <hr class="separador">
+
+                <div class="confianza-wrap">
+                    <div class="confianza-label">
+                        <div class="dato-label">Certeza Diagnóstica</div>
+                        <span>${confianza}%</span>
+                    </div>
+                    <div class="barra-bg">
+                        <div class="barra-fill" style="width: ${confianza}%"></div>
+                    </div>
+                </div>
+
+                <div class="dato-row">
+                    <div class="dato-label">Hallazgos Morfológicos / Radiológicos</div>
+                    <div class="dato-valor" style="color:#dfe6e9; font-size:0.85rem; line-height:1.6;">
+                        ${data.hallazgos || '—'}
+                    </div>
+                </div>
+
+                <div class="dato-row">
+                    <div class="dato-label">Dictamen de Telemetría</div>
+                    <div class="dato-valor" style="font-size:0.85rem; line-height:1.6; color:#b2bec3;">
+                        ${data.dictamen || '—'}
+                    </div>
+                </div>
+
+                <div style="font-size:0.68rem; color:var(--suave); margin-top:4px;">
+                    Análisis #${numero} · Haga clic en cualquier otra área ósea para expandir el espectro.
+                </div>
+            </div>
+        `;
+    }
+
+    function mostrarError(mensaje) {
+        cardDiagnostico.innerHTML = `
+            <div class="error-panel">
+                <div class="error-icono">⚠️</div>
+                <div class="error-titulo">BLOQUEO DE INTERCONEXIÓN</div>
+                <div class="error-msg">${mensaje}</div>
+            </div>
+        `;
+    }
+
+    function actualizarHistorialUI() {
+        if (historial.length === 0) {
+            historialWrap.style.display = 'none';
+            return;
+        }
+
+        historialWrap.style.display = 'block';
+        historialLista.innerHTML = historial.map((item, idx) => {
+            const esActivo = idx === puntoActivo;
+            const colorMap = {
+                'NORMAL': '#4cd137', 'FRACTURA': '#ff7675', 'FISURA': '#ffeaa7',
+                'ARTROSIS': '#ffeaa7', 'OSTEOPENIA': '#a29bfe', 'ANOMALÍA': '#ff7675',
+                'INDETERMINADO': '#8b9bb4'
+            };
+            const color = colorMap[item.estado] || '#8b9bb4';
+            return `
+                <div class="historial-item ${esActivo ? 'activo' : ''}" onclick="seleccionarPunto(${idx})">
+                    <div class="historial-num">${idx + 1}</div>
+                    <div class="historial-nombre">${item.estructura_osea || 'Estructura bajo espectro'}</div>
+                    <div class="historial-estado" style="color:${color};">${item.estado || '—'}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function seleccionarPunto(idx) {
+        puntoActivo = idx;
+        redibujarTodosMarcadores();
+        actualizarHistorialUI();
+        mostrarResultado(historial[idx], idx + 1);
+    }
+
+    function actualizarContador() {
+        contadorNum.textContent = historial.length;
+    }
+
+    function resetearSesion() {
+        archivoSeleccionado = null;
+        historial = [];
+        puntoActivo = -1;
+
+        preview.src = '';
+        preview.style.display = 'none';
+        placeholder.style.display = 'block';
+        instruccionClic.style.display = 'none';
+        contenedorVisor.classList.remove('tiene-imagen', 'esperando-clic');
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        cardDiagnostico.innerHTML = `
+            <div class="card-idle" id="estadoIdle">
+                <div class="idle-icon">📡</div>
+                <div>
+                    Cargue una imagen ósea y haga clic<br>
+                    sobre el fragmento que desea analizar.<br><br>
+                    <span style="color: var(--menta); font-weight:700;">
+                        El sistema identificará la pieza exacta<br>y emitirá un diagnóstico adaptativo.
+                    </span>
+                </div>
+            </div>
+        `;
+
+        historialWrap.style.display = 'none';
+        historialLista.innerHTML = '';
+        contadorNum.textContent = '0';
+        document.getElementById('fileInput').value = '';
+    }
+</script>
+</body>
+</html>
